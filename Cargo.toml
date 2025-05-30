@@ -27,11 +27,11 @@ embedded-hal-mock = { git = "https://github.com/tommy-gilligan/embedded-hal-mock
 
 # examples
 [target.'cfg(target_os="none")'.dev-dependencies]
-esp-backtrace = { version = "0.10.0", features = ["esp32", "panic-handler", "exception-handler", "print-uart"] }
-esp-println = { version = "0.7.0", features = ["esp32"] }
-hal = { package = "esp32-hal", version = "0.18.0", features = ["eh1"] }
+esp-backtrace = { version = "0.15.0", features = ["esp32", "panic-handler", "exception-handler", "println"] }
+esp-println = { version = "0.13.0", features = ["esp32", "auto"] }
+esp-hal = { version = "1.0.0-beta.0", features = ["esp32", "unstable"] }
 dither = { git = "https://github.com/tommy-gilligan/dither.git", branch = "separate-e-g" }
-embedded-hal-bus = "0.1.0"
+embedded-hal-bus = "0.3.0"
 
 [features]
 default = ["graphics"]

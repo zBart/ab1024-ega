@@ -15,15 +15,16 @@ use dither::vector::Vector;
 use embedded_graphics::{pixelcolor::Rgb888, prelude::*};
 use embedded_hal_bus::spi::ExclusiveDevice;
 use esp_backtrace as _;
-use fixed::types::extra::U16;
-use hal::{
-    clock::ClockControl,
-    gpio::IO,
-    peripherals::Peripherals,
-    prelude::*,
-    spi::{master::Spi, SpiMode},
-    Delay, Rtc,
+use esp_hal::delay::Delay;
+use esp_hal::gpio::{Input, InputConfig, Level, Output, OutputConfig};
+use esp_hal::main;
+use esp_hal::rtc_cntl::Rtc;
+use esp_hal::spi::{
+    master::{Config, Spi},
+    Mode,
 };
+use esp_hal::time::Rate;
+use fixed::types::extra::U16;
 use tinybmp::Bmp;
 type Num = fixed::FixedI32<U16>;
 
@@ -50,25 +51,29 @@ fn conversion(source: Vector<Num>) -> (Color, Vector<Num>) {
     (pair.0, source - Vector::from_rgb888(pair.1))
 }
 
-#[entry]
+#[main]
 fn main() -> ! {
-    let peripherals = Peripherals::take();
-    let system = peripherals.SYSTEM.split();
-    let clocks = ClockControl::max(system.clock_control).freeze();
-    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    let peripherals = esp_hal::init(esp_hal::Config::default());
 
-    let mut delay = Delay::new(&clocks);
-    let rst = io.pins.gpio19.into_push_pull_output();
-    let dc = io.pins.gpio33.into_push_pull_output();
-    let busy = io.pins.gpio32.into_floating_input();
-    let cs = io.pins.gpio27.into_push_pull_output();
+    let delay = Delay::new();
+    let rst = Output::new(peripherals.GPIO19, Level::Low, OutputConfig::default());
+    let dc = Output::new(peripherals.GPIO33, Level::Low, OutputConfig::default());
+    let busy = Input::new(peripherals.GPIO32, InputConfig::default());
+    let cs = Output::new(peripherals.GPIO27, Level::Low, OutputConfig::default());
 
     let spi = ExclusiveDevice::new_no_delay(
-        Spi::new(peripherals.SPI2, 200u32.kHz(), SpiMode::Mode0, &clocks)
-            .with_sck(io.pins.gpio18)
-            .with_mosi(io.pins.gpio23),
+        Spi::new(
+            peripherals.SPI2,
+            Config::default()
+                .with_frequency(Rate::from_khz(200))
+                .with_mode(Mode::_0),
+        )
+        .unwrap()
+        .with_sck(peripherals.GPIO18)
+        .with_mosi(peripherals.GPIO23),
         cs,
-    );
+    )
+    .unwrap();
 
     let bmp: Bmp<Rgb888> = Bmp::from_slice(include_bytes!("starry-night.bmp")).unwrap();
     let mut display = ab1024_ega::Display::new(spi, rst, dc, busy, delay);
@@ -80,5 +85,5 @@ fn main() -> ! {
     display.init().unwrap();
     display.display().unwrap();
 
-    Rtc::new(peripherals.LPWR).sleep_deep(&[], &mut delay)
+    Rtc::new(peripherals.LPWR).sleep_deep(&[])
 }

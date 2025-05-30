@@ -6,4 +6,7 @@ rustflags = [
 ]
 
 [alias]
-re = "run --release --target xtensa-esp32-none-elf -Z build-std=core --example "
+re = "run --release --target xtensa-esp32-none-elf --example "
+
+[unstable]
+build-std = ["core"]
